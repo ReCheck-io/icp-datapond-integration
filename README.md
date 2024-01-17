@@ -13,7 +13,7 @@ This repository provides a demonstration of an authentication setup using the II
 
 ![Architecture Diagram](./architecture-diagram.png)
 
-The architecture diagram provides an overview of the authentication setup, showcasing the interaction between components and the flow of internet identity authentication.
+The architecture diagram provides an overview of the ICP integration with DataPond AI, showcasing the interaction between services and canisters.
 
 ## License
 
