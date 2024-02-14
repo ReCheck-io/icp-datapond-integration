@@ -2,12 +2,12 @@
 
 ## Overview
 
-This repository provides a demonstration of an authentication setup using the IIAuthHook module, which exposes specific methods for internet identity authentication. The IIAuthHook is utilized within a React context, abstracted through a custom hook, and employed in the `login-page.tsx` component for internet identity-based login.
+This repository provides a sample code for II integration and ICP Canister integration with the Node.js API.
 
-## Files and Structure
+## Folders
 
-- **`IIAuthHook.ts`**: Contains the IIAuthHook module, a custom hook exposing methods for internet identity authentication.
-- **`login-page.tsx`**: Demonstrates the usage of the IIAuthHook within a React context for implementing internet identity-based login.
+- **`ii-integration-code`**: Contains sample codes for Internet Identity integration with React Context and hooks.
+- **`canister-integration-code`**: Contains sample codes for the process of integration of Storage and Tracing canisters.
 
 ## Architecture Diagram
 
