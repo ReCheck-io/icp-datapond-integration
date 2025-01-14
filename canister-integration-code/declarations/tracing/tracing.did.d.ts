@@ -1,5 +1,6 @@
 import type { Principal } from '@dfinity/principal';
 import type { ActorMethod } from '@dfinity/agent';
+import type { IDL } from '@dfinity/candid';
 
 export interface _SERVICE {
   'addLog' : ActorMethod<
@@ -11,20 +12,11 @@ export interface _SERVICE {
           'dataId' : string,
           'userId' : string,
           'createdAt' : bigint,
+          'compositeHash' : string,
           'dataName' : string,
           'serviceId' : Principal,
         }
       } |
-      {
-        'Err' : { 'InvalidPayload' : string } |
-          { 'NotFound' : string } |
-          { 'Unauthorized' : string } |
-          { 'Conflict' : string }
-      }
-  >,
-  'generateId' : ActorMethod<
-    [],
-    { 'Ok' : Principal } |
       {
         'Err' : { 'InvalidPayload' : string } |
           { 'NotFound' : string } |
@@ -42,6 +34,7 @@ export interface _SERVICE {
             'dataId' : string,
             'userId' : string,
             'createdAt' : bigint,
+            'compositeHash' : string,
             'dataName' : string,
             'serviceId' : Principal,
           }
@@ -64,6 +57,30 @@ export interface _SERVICE {
             'dataId' : string,
             'userId' : string,
             'createdAt' : bigint,
+            'compositeHash' : string,
+            'dataName' : string,
+            'serviceId' : Principal,
+          }
+        >
+      } |
+      {
+        'Err' : { 'InvalidPayload' : string } |
+          { 'NotFound' : string } |
+          { 'Unauthorized' : string } |
+          { 'Conflict' : string }
+      }
+  >,
+  'getLogsByDataId' : ActorMethod<
+    [string],
+    {
+        'Ok' : Array<
+          {
+            'id' : Principal,
+            'action' : string,
+            'dataId' : string,
+            'userId' : string,
+            'createdAt' : bigint,
+            'compositeHash' : string,
             'dataName' : string,
             'serviceId' : Principal,
           }
@@ -86,6 +103,53 @@ export interface _SERVICE {
             'dataId' : string,
             'userId' : string,
             'createdAt' : bigint,
+            'compositeHash' : string,
+            'dataName' : string,
+            'serviceId' : Principal,
+          }
+        >
+      } |
+      {
+        'Err' : { 'InvalidPayload' : string } |
+          { 'NotFound' : string } |
+          { 'Unauthorized' : string } |
+          { 'Conflict' : string }
+      }
+  >,
+  'getLogsByUser' : ActorMethod<
+    [string],
+    {
+        'Ok' : Array<
+          {
+            'id' : Principal,
+            'action' : string,
+            'dataId' : string,
+            'userId' : string,
+            'createdAt' : bigint,
+            'compositeHash' : string,
+            'dataName' : string,
+            'serviceId' : Principal,
+          }
+        >
+      } |
+      {
+        'Err' : { 'InvalidPayload' : string } |
+          { 'NotFound' : string } |
+          { 'Unauthorized' : string } |
+          { 'Conflict' : string }
+      }
+  >,
+  'getLogsByUserAndDataId' : ActorMethod<
+    [string, string],
+    {
+        'Ok' : Array<
+          {
+            'id' : Principal,
+            'action' : string,
+            'dataId' : string,
+            'userId' : string,
+            'createdAt' : bigint,
+            'compositeHash' : string,
             'dataName' : string,
             'serviceId' : Principal,
           }
@@ -108,21 +172,9 @@ export interface _SERVICE {
           { 'Conflict' : string }
       }
   >,
-  'verifyDocument' : ActorMethod<
-    [string],
-    {
-        'Ok' : Array<
-          {
-            'id' : Principal,
-            'action' : string,
-            'dataId' : string,
-            'userId' : string,
-            'createdAt' : bigint,
-            'dataName' : string,
-            'serviceId' : Principal,
-          }
-        >
-      } |
+  'verifyLog' : ActorMethod<
+    [string, string, string],
+    { 'Ok' : boolean } |
       {
         'Err' : { 'InvalidPayload' : string } |
           { 'NotFound' : string } |
@@ -131,3 +183,5 @@ export interface _SERVICE {
       }
   >,
 }
+export declare const idlFactory: IDL.InterfaceFactory;
+export declare const init: (args: { IDL: typeof IDL }) => IDL.Type[];

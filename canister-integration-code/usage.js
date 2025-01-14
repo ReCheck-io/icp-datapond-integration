@@ -1,8 +1,7 @@
 // This function is run by queue
 export async function handleFileUpload(job) {
   try {
-    const { userId, id, name, size, path, mimetype, organizationId } =
-      job.data.data;
+    const { userId, id, name, size, path, mimetype, organizationId } = job.data.data;
 
     if (!path) {
       throw new Error('Missing path in file data');
@@ -31,29 +30,29 @@ export async function handleFileUpload(job) {
       content: fileUintArray,
     };
 
+    const hasSpace = await storageActor.checkCanisterFreeSpace(filePayload.size);
+
+    if (!hasSpace) {
+      console.log('NO SUFFICIENT SPACE IN THE STORAGE CANISTER!');
+      return;
+    }
+
     let result;
 
     if (fileBlob.size > maxChunkSize) {
-      // File needs to be chunked
       let offset = 0;
       while (offset < size) {
         const chunk = fileUintArray.slice(offset, offset + maxChunkSize);
         filePayload.content = chunk;
 
         // eslint-disable-next-line no-await-in-loop
-        result = await facade.uploadFile(filePayload, userId, true);
-
+        result = await storageActor.uploadFile(filePayload, userId);
         // Update offset for the next chunk
         offset += maxChunkSize;
       }
     } else {
-      // File is small, upload as a single chunk
-      result = await facade.uploadFile(filePayload, userId, false);
+      result = await storageActor.uploadFile(filePayload, userId);
     }
-
-    console.log(
-      `[STORAGE_CANISTER_UPLOAD_RESULT]: ${JSON.stringify(result, null, 4)}`
-    );
 
     if (result.Ok) {
       await File.updateOne(
@@ -63,85 +62,113 @@ export async function handleFileUpload(job) {
         }
       );
 
-      const logResult = await tracing.addLog(userId, 'uploaded', id, name);
+      const { _id: originalId } = await File.findOne({
+        organization: organizationId,
+        fileName: name,
+        fileLocation: path,
+      }).select({ _id: 1 });
 
-      const serializedLogResult = JSON.stringify(
-        logResult,
-        (key, value) => {
-          if (typeof value === 'bigint') {
-            return value.toString();
-          }
-          return value;
-        },
-        4
-      );
+      try {
+        const logResult = await addTracingLog(userId, 'uploaded', originalId.toString(), name);
 
-      console.log(`[TRACING_CANISTER_ADD_LOG_RESULT]: ${serializedLogResult}`);
+        const serializedLogResult = serializeBigInt(logResult);
+
+        console.log(`[TRACING_CANISTER_ADD_LOG_RESULT]: ${JSON.stringify(serializedLogResult, null, 4)}`);
+      } catch (error) {
+        console.log('handleFileUpload - tracing.addLog', error);
+      }
 
       console.log(`File upload successful for user ${userId}, fileId: ${id}`);
     }
   } catch (error) {
+    console.log(error);
     console.error(`File upload failed: ${error.message}`);
   }
 }
 
-// This function should be run when there is need to read the file
-export async function getAndConcatenateFile(userId, fileId, canisterId) {
-  let chunkNumber = 0;
-  let concatenatedFile = new Uint8Array();
+// This function should be run when there is need to read the file from Storage Canister
+export async function getAndConcatenateFile(fileId) {
+  try {
+    let chunkNumber = 0;
+    let fileData = {};
 
-  let fileData = {};
+    const chunks = [];
+    while (true) {
+      // eslint-disable-next-line no-await-in-loop
+      const fileResponse = await storageActor.getFile(fileId, chunkNumber);
 
-  while (true) {
-    // eslint-disable-next-line no-await-in-loop
-    const fileResponse = await facade.getFile(
-      userId,
-      fileId,
-      canisterId,
-      chunkNumber
-    );
+      if (!fileResponse.Ok) {
+        console.error('Failed to retrieve file chunk.');
+        return;
+      }
 
-    console.log('[FILE_RESPONSE]', fileResponse);
+      chunks.push(fileResponse.Ok.chunk);
 
-    if (!fileResponse.Ok) {
-      console.error('Failed to retrieve file chunk.');
-      return;
+      if (!fileResponse.Ok.hasNext) {
+        fileData = {
+          id: fileResponse.Ok.id,
+          name: fileResponse.Ok.name,
+        };
+        break;
+      }
+
+      chunkNumber++;
     }
 
-    // Append the current chunk to the concatenated file
-    concatenatedFile = new Uint8Array([
-      ...concatenatedFile,
-      ...fileResponse.Ok.chunk,
-    ]);
+    const concatenatedFile = new Uint8Array(chunks.reduce((sum, chunk) => sum + chunk.length, 0));
+    let offset = 0;
 
-    if (!fileResponse.Ok.hasNext) {
-      // No more chunks, exit the loop
-      fileData = {
-        id: fileResponse.Ok.id,
-        name: fileResponse.Ok.name,
-      };
-      break;
+    // eslint-disable-next-line no-restricted-syntax
+    for (const chunk of chunks) {
+      concatenatedFile.set(chunk, offset);
+      offset += chunk.length;
     }
 
-    // Increment the chunk number for the next iteration
-    chunkNumber++;
+    console.log(`File with id=${fileId} was retrieved and concatenated successfully!`);
+
+    return uint8ToBase64(concatenatedFile);
+  } catch (error) {
+    console.error('Error saving concatenated file:', error);
   }
-
-  // For testing purposes
-  // try {
-  //   await fs.promises.writeFile(`./${fileData.name}`, concatenatedFile);
-
-  //   console.log('Concatenated File saved successfully:');
-  // } catch (error) {
-  //   console.error('Error saving concatenated file:', error);
-  // }
-
-  return uint8ToBase64(concatenatedFile);
 }
 
 
+// Tracing canister
 // =============================================================================
 
-// Tracing canister usage:
+// Add log to tracing canister
+const addLogResult = await tracing.addLog(userId, 'consumed', fileId, fileName);
 
-// await tracing.addLog(userId, 'consumed', fileId, fileName);
+// Get tracing logs by user and data Id
+const getLogsResult = await tracing.getLogsByUserAndDataId(userId, fileId)
+
+
+// Points Canister
+// =============================================================================
+
+// Init user in the points canister - create record for user
+const initResult = await pointsCanister.initializeUser(principal);
+
+// Call points caniter to add points to user
+const addResult = await pointsCanister.addPoints(
+  userPrincipal,
+  amount,
+  `Monthly point earning for ${file.fileName}`
+);
+
+// Get user by Principal
+const userResult = await pointsCanister.getUser(userPrincipal);
+
+// Get all pending transactions
+const txResult = await pointsCanister.getPendingRedeemTransactions();
+
+// Request redeem
+const requestRedeem = await pointsCanister.requestRedeem(
+  userPrincipal,
+  amount,
+  walletAddress,
+  description || ''
+);
+
+// Update redeem status
+const updateRedeemResult = await pointsCanister.updateRedeemStatus(userPrincipal, transactionId, status);

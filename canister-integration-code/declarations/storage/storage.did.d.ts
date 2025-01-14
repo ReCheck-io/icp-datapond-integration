@@ -1,9 +1,11 @@
 import type { Principal } from '@dfinity/principal';
 import type { ActorMethod } from '@dfinity/agent';
+import type { IDL } from '@dfinity/candid';
 
 export interface _SERVICE {
+  'checkCanisterFreeSpace' : ActorMethod<[bigint], boolean>,
   'getFile' : ActorMethod<
-    [string, string, string, bigint],
+    [string, bigint],
     {
         'Ok' : {
           'id' : string,
@@ -23,19 +25,7 @@ export interface _SERVICE {
   >,
   'initializeCanister' : ActorMethod<
     [Principal],
-    { 'Ok' : boolean } |
-      {
-        'Err' : { 'NotKnown' : string } |
-          { 'InvalidPayload' : string } |
-          { 'NotFound' : string } |
-          { 'UploadError' : string } |
-          { 'Unauthorized' : string } |
-          { 'Conflict' : string }
-      }
-  >,
-  'loadCanisterCode' : ActorMethod<
-    [Uint8Array | number[]],
-    { 'Ok' : boolean } |
+    { 'Ok' : { 'id' : Principal, 'createdAt' : bigint } } |
       {
         'Err' : { 'NotKnown' : string } |
           { 'InvalidPayload' : string } |
@@ -54,7 +44,6 @@ export interface _SERVICE {
         'size' : bigint,
       },
       string,
-      boolean,
     ],
     { 'Ok' : { 'id' : string, 'name' : string, 'canisterId' : string } } |
       {
@@ -67,3 +56,5 @@ export interface _SERVICE {
       }
   >,
 }
+export declare const idlFactory: IDL.InterfaceFactory;
+export declare const init: (args: { IDL: typeof IDL }) => IDL.Type[];

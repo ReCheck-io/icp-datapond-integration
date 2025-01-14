@@ -1,7 +1,8 @@
 export const idlFactory = ({ IDL }) => {
   return IDL.Service({
+    'checkCanisterFreeSpace' : IDL.Func([IDL.Nat], [IDL.Bool], []),
     'getFile' : IDL.Func(
-        [IDL.Text, IDL.Text, IDL.Text, IDL.Nat],
+        [IDL.Text, IDL.Nat],
         [
           IDL.Variant({
             'Ok' : IDL.Record({
@@ -26,24 +27,10 @@ export const idlFactory = ({ IDL }) => {
         [IDL.Principal],
         [
           IDL.Variant({
-            'Ok' : IDL.Bool,
-            'Err' : IDL.Variant({
-              'NotKnown' : IDL.Text,
-              'InvalidPayload' : IDL.Text,
-              'NotFound' : IDL.Text,
-              'UploadError' : IDL.Text,
-              'Unauthorized' : IDL.Text,
-              'Conflict' : IDL.Text,
+            'Ok' : IDL.Record({
+              'id' : IDL.Principal,
+              'createdAt' : IDL.Nat64,
             }),
-          }),
-        ],
-        [],
-      ),
-    'loadCanisterCode' : IDL.Func(
-        [IDL.Vec(IDL.Nat8)],
-        [
-          IDL.Variant({
-            'Ok' : IDL.Bool,
             'Err' : IDL.Variant({
               'NotKnown' : IDL.Text,
               'InvalidPayload' : IDL.Text,
@@ -65,7 +52,6 @@ export const idlFactory = ({ IDL }) => {
             'size' : IDL.Nat,
           }),
           IDL.Text,
-          IDL.Bool,
         ],
         [
           IDL.Variant({
